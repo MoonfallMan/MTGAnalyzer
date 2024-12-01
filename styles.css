@@ -75,11 +75,6 @@ input[type="text"] {
     gap: 0.5rem;
 }
 
-.mana-filter label {
-    color: var(--secondary-color);
-    font-weight: 500;
-}
-
 .mana-symbols {
     display: flex;
     gap: 0.3rem;
@@ -395,4 +390,156 @@ footer {
     background-color: var(--primary-color);
     color: var(--secondary-color);
     margin-top: 4rem;
+}
+
+/* Mobile-friendly styles */
+@media screen and (max-width: 768px) {
+    nav {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .search-container {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    input[type="text"] {
+        width: 100%;
+    }
+
+    .mana-filter {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .mana-symbols {
+        justify-content: center;
+    }
+
+    .filters-section {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    select {
+        width: 100%;
+    }
+
+    .decks-grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+    }
+
+    .modal-content {
+        width: 95%;
+        margin: 1rem auto;
+        padding: 1rem;
+        max-height: 95vh;
+    }
+
+    .deck-stats {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 0.5rem;
+    }
+
+    .stat-box {
+        padding: 1rem;
+    }
+
+    .card-categories {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .card-item-details {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .card-info {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    /* Adjust card preview for touch devices */
+    .card-preview {
+        position: fixed;
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 350px;
+        background-color: white;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        z-index: 2000;
+        pointer-events: auto;
+        padding: 1rem;
+    }
+
+    .card-preview img {
+        width: 100%;
+        height: auto;
+    }
+
+    /* Add close button for mobile preview */
+    .preview-close {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        background: var(--accent-color);
+        color: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 16px;
+        line-height: 1;
+    }
+}
+
+/* Tablet-specific adjustments */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+    .decks-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .deck-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .modal-content {
+        width: 90%;
+        margin: 2rem auto;
+    }
+}
+
+/* Landscape mode adjustments for mobile */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+    .modal-content {
+        max-height: 85vh;
+    }
+
+    .deck-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) {
+    .card-item:hover {
+        transform: none;
+    }
+
+    .card-item:active {
+        background-color: var(--hover-color);
+    }
 }

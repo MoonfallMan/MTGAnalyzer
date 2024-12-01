@@ -50,6 +50,7 @@ async function init() {
     showLoading();
     await fetchAllPreconDecks();
     populateFilters();
+    initializeTouchEvents();
     hideLoading();
 }
 
@@ -304,9 +305,8 @@ function updatePriceInfo(cards) {
 
 // Show card preview
 function showCardPreview(event, card) {
+    const isTouchDevice = 'ontouchstart' in window;
     const rect = event.target.getBoundingClientRect();
-    const x = event.clientX + 20;
-    const y = event.clientY + 20;
     
     previewImage.src = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal;
     previewName.textContent = card.name;
@@ -314,13 +314,58 @@ function showCardPreview(event, card) {
     previewPrice.textContent = card.prices?.usd ? `$${card.prices.usd}` : 'Price not available';
     
     cardPreview.style.display = 'block';
-    cardPreview.style.left = `${x}px`;
-    cardPreview.style.top = `${y}px`;
+
+    if (isTouchDevice) {
+        // Center the preview for touch devices
+        cardPreview.style.left = '50%';
+        cardPreview.style.top = '50%';
+        
+        // Add close button if it doesn't exist
+        if (!cardPreview.querySelector('.preview-close')) {
+            const closeBtn = document.createElement('div');
+            closeBtn.className = 'preview-close';
+            closeBtn.innerHTML = '×';
+            closeBtn.addEventListener('click', hideCardPreview);
+            cardPreview.appendChild(closeBtn);
+        }
+    } else {
+        // Position next to cursor for desktop
+        const x = event.clientX + 20;
+        const y = event.clientY + 20;
+        
+        // Adjust position if preview would go off screen
+        const previewRect = cardPreview.getBoundingClientRect();
+        const maxX = window.innerWidth - previewRect.width - 20;
+        const maxY = window.innerHeight - previewRect.height - 20;
+        
+        cardPreview.style.left = `${Math.min(x, maxX)}px`;
+        cardPreview.style.top = `${Math.min(y, maxY)}px`;
+    }
 }
 
 // Hide card preview
 function hideCardPreview() {
     cardPreview.style.display = 'none';
+}
+
+// Initialize touch events
+function initializeTouchEvents() {
+    const isTouchDevice = 'ontouchstart' in window;
+    
+    if (isTouchDevice) {
+        // Add touch event listeners to card items
+        document.addEventListener('click', (e) => {
+            const cardItem = e.target.closest('.card-item');
+            if (!cardItem) {
+                hideCardPreview();
+            }
+        });
+
+        // Prevent scrolling when touching the preview
+        cardPreview.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        });
+    }
 }
 
 // Close modal
