@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTG Commander Precons</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Beleren:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Commander Precons</div>
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Search decks...">
+                <div class="mana-filter">
+                    <label>Mana Color:</label>
+                    <div class="mana-symbols">
+                        <button class="mana-btn" data-color="W">W</button>
+                        <button class="mana-btn" data-color="U">U</button>
+                        <button class="mana-btn" data-color="B">B</button>
+                        <button class="mana-btn" data-color="R">R</button>
+                        <button class="mana-btn" data-color="G">G</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="filters-section">
+            <select id="setFilter">
+                <option value="">All Sets</option>
+            </select>
+            <select id="yearFilter">
+                <option value="">All Years</option>
+            </select>
+        </div>
+
+        <div class="decks-container">
+            <div id="decksGrid" class="decks-grid">
+                <!-- Decks will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <div id="loadingSpinner" class="loading-spinner">
+            <div class="spinner"></div>
+        </div>
+    </main>
+
+    <div id="deckModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <div id="modalContent">
+                <h2 id="deckName"></h2>
+                <div class="deck-stats">
+                    <div class="stat-box">
+                        <h3>Mana Curve</h3>
+                        <canvas id="manaCurveChart"></canvas>
+                    </div>
+                    <div class="stat-box">
+                        <h3>Color Distribution</h3>
+                        <canvas id="colorDistributionChart"></canvas>
+                    </div>
+                    <div class="stat-box">
+                        <h3>Card Types</h3>
+                        <canvas id="cardTypesChart"></canvas>
+                    </div>
+                    <div class="stat-box">
+                        <h3>Deck Value</h3>
+                        <div id="deckValue" class="value-display">
+                            <div class="price-box">
+                                <span>Total:</span>
+                                <span id="totalPrice">$0.00</span>
+                            </div>
+                            <div class="price-box">
+                                <span>Average:</span>
+                                <span id="avgPrice">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-categories">
+                    <div class="category-list">
+                        <h3>Commander</h3>
+                        <div id="commanderList" class="card-list"></div>
+                    </div>
+                    <div class="category-list">
+                        <h3>Creatures</h3>
+                        <div id="creaturesList" class="card-list"></div>
+                    </div>
+                    <div class="category-list">
+                        <h3>Spells</h3>
+                        <div id="spellsList" class="card-list"></div>
+                    </div>
+                    <div class="category-list">
+                        <h3>Lands</h3>
+                        <div id="landsList" class="card-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card Preview Tooltip -->
+    <div id="cardPreview" class="card-preview">
+        <img id="previewImage" src="" alt="">
+        <div class="preview-details">
+            <h4 id="previewName"></h4>
+            <p id="previewType"></p>
+            <p id="previewPrice"></p>
+        </div>
+    </div>
+
+    <footer>
+        <p>Powered by Scryfall API • Not affiliated with Wizards of the Coast</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
