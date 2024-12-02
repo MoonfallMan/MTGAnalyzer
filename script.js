@@ -28,6 +28,34 @@ let activeFilters = {
 // Charts
 let manaCurveChart, colorDistributionChart, cardTypesChart;
 
+// Cache management
+const CACHE_KEY = 'mtgAnalyzer_cache';
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+function getCachedData() {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (!cached) return null;
+
+    const { timestamp, data } = JSON.parse(cached);
+    const now = new Date().getTime();
+
+    // Check if cache is expired (older than 24 hours)
+    if (now - timestamp > CACHE_DURATION) {
+        localStorage.removeItem(CACHE_KEY);
+        return null;
+    }
+
+    return data;
+}
+
+function setCachedData(data) {
+    const cacheObject = {
+        timestamp: new Date().getTime(),
+        data: data
+    };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cacheObject));
+}
+
 // Initialize
 async function init() {
     showLoading();
@@ -38,7 +66,17 @@ async function init() {
 // Fetch all precon decks
 async function fetchAllPreconDecks() {
     try {
-        // Fetch all sets
+        // Check cache first
+        const cachedDecks = getCachedData();
+        if (cachedDecks) {
+            preconDecks = cachedDecks;
+            displayDecks(preconDecks);
+            populateFilters();
+            initializeTouchEvents();
+            return;
+        }
+
+        // If no cache, fetch from API
         const setsResponse = await fetch('https://api.scryfall.com/sets');
         const setsData = await setsResponse.json();
         
@@ -78,12 +116,24 @@ async function fetchAllPreconDecks() {
         // Sort decks by release date (newest first)
         preconDecks.sort((a, b) => b.year - a.year);
         
+        // Cache the fetched data
+        setCachedData(preconDecks);
+        
         // Update UI
         displayDecks(preconDecks);
         populateFilters();
         initializeTouchEvents();
     } catch (error) {
         console.error('Error fetching precon decks:', error);
+        
+        // If API fetch fails, try to use cached data even if expired
+        const cachedDecks = getCachedData(true);
+        if (cachedDecks) {
+            preconDecks = cachedDecks;
+            displayDecks(preconDecks);
+            populateFilters();
+            initializeTouchEvents();
+        }
     }
 }
 
