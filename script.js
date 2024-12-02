@@ -229,15 +229,167 @@ function filterDecks() {
 // Fetch deck details
 async function fetchDeckDetails(deck) {
     try {
-        const response = await fetch(`https://api.scryfall.com/cards/search?q=set:${deck.setCode}+-is:commander+include:extras`);
+        // Using proper Scryfall syntax for the query
+        const query = `e:${deck.setCode} -is:commander`;
+        const encodedQuery = encodeURIComponent(query);
+        const response = await fetch(`https://api.scryfall.com/cards/search?q=${encodedQuery}&unique=cards`);
+        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        return data.data || [];
+        
+        if (!data.data || data.data.length === 0) {
+            throw new Error('No cards found for this deck');
+        }
+        
+        return data.data;
     } catch (error) {
         console.error('Error fetching deck details:', error);
         throw error;
+    }
+}
+
+// Calculate deck statistics
+function calculateDeckStats(cards) {
+    const stats = {
+        manaCurve: Array(11).fill(0), // 0-10+ CMC
+        colors: {
+            W: 0, U: 0, B: 0, R: 0, G: 0, C: 0
+        },
+        types: {
+            Creature: 0,
+            Instant: 0,
+            Sorcery: 0,
+            Artifact: 0,
+            Enchantment: 0,
+            Planeswalker: 0,
+            Land: 0
+        }
+    };
+
+    cards.forEach(card => {
+        // Mana curve
+        const cmc = Math.min(10, Math.floor(card.cmc || 0));
+        stats.manaCurve[cmc]++;
+
+        // Colors
+        if (card.colors && card.colors.length > 0) {
+            card.colors.forEach(color => {
+                if (stats.colors.hasOwnProperty(color)) {
+                    stats.colors[color]++;
+                }
+            });
+        } else {
+            stats.colors.C++;
+        }
+
+        // Card types
+        Object.keys(stats.types).forEach(type => {
+            if (card.type_line && card.type_line.includes(type)) {
+                stats.types[type]++;
+            }
+        });
+    });
+
+    return stats;
+}
+
+// Update charts with deck statistics
+function updateCharts(stats) {
+    // Destroy existing charts
+    if (manaCurveChart) manaCurveChart.destroy();
+    if (colorDistributionChart) colorDistributionChart.destroy();
+    if (cardTypesChart) cardTypesChart.destroy();
+    
+    // Mana Curve Chart
+    const manaCurveCtx = document.getElementById('manaCurveChart').getContext('2d');
+    manaCurveChart = new Chart(manaCurveCtx, {
+        type: 'bar',
+        data: {
+            labels: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10+'],
+            datasets: [{
+                label: 'Number of Cards',
+                data: stats.manaCurve,
+                backgroundColor: '#e69f34'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    
+    // Color Distribution Chart
+    const colorDistributionCtx = document.getElementById('colorDistributionChart').getContext('2d');
+    colorDistributionChart = new Chart(colorDistributionCtx, {
+        type: 'pie',
+        data: {
+            labels: ['White', 'Blue', 'Black', 'Red', 'Green', 'Colorless'],
+            datasets: [{
+                data: Object.values(stats.colors),
+                backgroundColor: [
+                    '#f8e7b9',
+                    '#3c89d0',
+                    '#382b2f',
+                    '#e24d4b',
+                    '#427c46',
+                    '#808080'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    
+    // Card Types Chart
+    const cardTypesCtx = document.getElementById('cardTypesChart').getContext('2d');
+    cardTypesChart = new Chart(cardTypesCtx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(stats.types),
+            datasets: [{
+                data: Object.values(stats.types),
+                backgroundColor: [
+                    '#e69f34',
+                    '#3c89d0',
+                    '#e24d4b',
+                    '#427c46',
+                    '#f8e7b9',
+                    '#382b2f',
+                    '#808080'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+}
+
+// Update price information
+async function updatePriceInfo(cards) {
+    try {
+        let totalPrice = 0;
+        let cardCount = 0;
+
+        cards.forEach(card => {
+            if (card.prices && card.prices.usd) {
+                totalPrice += parseFloat(card.prices.usd);
+                cardCount++;
+            }
+        });
+
+        if (cardCount === 0) return null;
+
+        const averagePrice = totalPrice / cardCount;
+        return `$${totalPrice.toFixed(2)} (Avg: $${averagePrice.toFixed(2)})`;
+    } catch (error) {
+        console.error('Error calculating price info:', error);
+        return null;
     }
 }
 
@@ -301,121 +453,6 @@ async function openDeckDetails(deck) {
             </div>
         `;
     }
-}
-
-// Calculate deck statistics
-function calculateDeckStats(cards) {
-    const stats = {
-        manaCurve: Array(8).fill(0), // 0-7+ CMC
-        colorDistribution: { W: 0, U: 0, B: 0, R: 0, G: 0 },
-        cardTypes: {}
-    };
-    
-    cards.forEach(card => {
-        // Mana curve
-        const cmc = Math.min(7, Math.floor(card.cmc || 0));
-        stats.manaCurve[cmc]++;
-        
-        // Color distribution
-        if (card.colors) {
-            card.colors.forEach(color => {
-                if (stats.colorDistribution[color] !== undefined) {
-                    stats.colorDistribution[color]++;
-                }
-            });
-        }
-        
-        // Card types
-        const mainType = card.type_line.split('—')[0].trim().split(' ')[0];
-        stats.cardTypes[mainType] = (stats.cardTypes[mainType] || 0) + 1;
-    });
-    
-    return stats;
-}
-
-// Update charts with deck statistics
-function updateCharts(stats) {
-    // Destroy existing charts
-    if (manaCurveChart) manaCurveChart.destroy();
-    if (colorDistributionChart) colorDistributionChart.destroy();
-    if (cardTypesChart) cardTypesChart.destroy();
-    
-    // Mana Curve Chart
-    const manaCurveCtx = document.getElementById('manaCurveChart').getContext('2d');
-    manaCurveChart = new Chart(manaCurveCtx, {
-        type: 'bar',
-        data: {
-            labels: ['0', '1', '2', '3', '4', '5', '6', '7+'],
-            datasets: [{
-                label: 'Number of Cards',
-                data: stats.manaCurve,
-                backgroundColor: '#e69f34'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-    
-    // Color Distribution Chart
-    const colorDistributionCtx = document.getElementById('colorDistributionChart').getContext('2d');
-    colorDistributionChart = new Chart(colorDistributionCtx, {
-        type: 'pie',
-        data: {
-            labels: ['White', 'Blue', 'Black', 'Red', 'Green'],
-            datasets: [{
-                data: Object.values(stats.colorDistribution),
-                backgroundColor: [
-                    '#f8e7b9',
-                    '#3c89d0',
-                    '#382b2f',
-                    '#e24d4b',
-                    '#427c46'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-    
-    // Card Types Chart
-    const cardTypesCtx = document.getElementById('cardTypesChart').getContext('2d');
-    cardTypesChart = new Chart(cardTypesCtx, {
-        type: 'doughnut',
-        data: {
-            labels: Object.keys(stats.cardTypes),
-            datasets: [{
-                data: Object.values(stats.cardTypes),
-                backgroundColor: [
-                    '#e69f34',
-                    '#3c89d0',
-                    '#e24d4b',
-                    '#427c46',
-                    '#f8e7b9',
-                    '#382b2f'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-}
-
-// Update price information
-function updatePriceInfo(cards) {
-    const prices = cards.map(card => parseFloat(card.prices?.usd || 0));
-    const totalPrice = prices.reduce((a, b) => a + b, 0);
-    const averagePrice = totalPrice / prices.length;
-    
-    document.getElementById('totalPrice').textContent = `$${totalPrice.toFixed(2)}`;
-    document.getElementById('avgPrice').textContent = `$${averagePrice.toFixed(2)}`;
-    
-    return `$${totalPrice.toFixed(2)}`;
 }
 
 // Show card preview
