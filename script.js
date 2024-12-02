@@ -229,20 +229,28 @@ function filterDecks() {
 // Fetch deck details
 async function fetchDeckDetails(deck) {
     try {
-        // Using proper Scryfall syntax for the query
-        const query = `e:${deck.setCode} -is:commander`;
+        // Using proper Scryfall syntax: set:[code] for exact set matching
+        const query = `set:${deck.setCode.toLowerCase()} -is:commander`;
         const encodedQuery = encodeURIComponent(query);
-        const response = await fetch(`https://api.scryfall.com/cards/search?q=${encodedQuery}&unique=cards`);
+        const response = await fetch(`https://api.scryfall.com/cards/search?q=${encodedQuery}&unique=prints&order=set`);
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            console.error('Scryfall API Error:', {
+                status: response.status,
+                statusText: response.statusText,
+                query: query
+            });
+            throw new Error(`API error: ${response.status} - ${response.statusText}`);
         }
+
         const data = await response.json();
         
         if (!data.data || data.data.length === 0) {
-            throw new Error('No cards found for this deck');
+            console.error('No cards found for query:', query);
+            throw new Error(`No cards found for set ${deck.setCode}`);
         }
-        
+
+        console.log(`Found ${data.data.length} cards for set ${deck.setCode}`);
         return data.data;
     } catch (error) {
         console.error('Error fetching deck details:', error);
