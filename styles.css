@@ -5,6 +5,8 @@
     --text-color: #333;
     --border-color: #ddd;
     --hover-color: #f0f0f0;
+    --card-bg: white;
+    --text-secondary: #666;
     
     /* Mana Colors */
     --white-mana: #f8e7b9;
@@ -129,25 +131,27 @@ select {
 }
 
 .deck-card {
-    background-color: white;
+    background: var(--card-bg);
     border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    transition: transform 0.2s;
+    padding: 10px;
+    margin: 10px;
     cursor: pointer;
-}
-
-.deck-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+    width: 250px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .deck-image {
     width: 100%;
-    height: 380px;
-    object-fit: contain;
-    background-color: #f5f5f5;
-    padding: 1rem;
+    height: 200px;
+    overflow: hidden;
+    border-radius: 5px;
+}
+
+.deck-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .deck-info {
@@ -382,6 +386,28 @@ canvas {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+.loading-stats {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-color);
+}
+
+.loading-stats .spinner {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top: 4px solid var(--accent-color);
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+.stats-loading-text {
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
 }
 
 footer {

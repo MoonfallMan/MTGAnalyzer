@@ -240,63 +240,66 @@ async function fetchDeckDetails(deck) {
 
 // Open deck details modal with enhanced features
 async function openDeckDetails(deck) {
-    showLoading();
     modal.style.display = 'block';
-    document.getElementById('deckName').textContent = deck.name;
     
-    const cards = await fetchDeckDetails(deck);
-    
-    // Categorize cards
-    const categories = {
-        commander: [deck],
-        creatures: cards.filter(card => card.type_line.includes('Creature')),
-        spells: cards.filter(card => !card.type_line.includes('Creature') && !card.type_line.includes('Land')),
-        lands: cards.filter(card => card.type_line.includes('Land'))
-    };
-    
-    // Calculate deck statistics
-    const deckStats = calculateDeckStats(cards);
-    
-    // Update charts
-    updateCharts(deckStats);
-    
-    // Update price information
-    updatePriceInfo(cards);
-    
-    // Update modal content with card lists
-    Object.entries(categories).forEach(([category, cardList]) => {
-        const container = document.getElementById(`${category}List`);
-        container.innerHTML = '';
+    // Show loading state first
+    modalContent.innerHTML = `
+        <div class="loading-stats">
+            <div class="spinner"></div>
+            <div class="stats-loading-text">Loading deck details...</div>
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`https://api.scryfall.com/cards/search?q=deck:${deck.setCode} -is:commander`);
+        const data = await response.json();
         
-        cardList.forEach(card => {
-            const cardElement = document.createElement('div');
-            cardElement.className = 'card-item';
+        if (data.data) {
+            const cards = data.data;
+            const stats = calculateDeckStats(cards);
+            const priceInfo = await updatePriceInfo(cards);
             
-            // Format mana cost to be more readable
-            const manaCost = card.mana_cost ? card.mana_cost.replace(/[{}]/g, '') : '';
-            
-            // Get card price
-            const price = card.prices?.usd ? `$${card.prices.usd}` : 'N/A';
-            
-            cardElement.innerHTML = `
-                <div class="card-item-details">
-                    <span class="card-name">${card.name}</span>
-                    <div class="card-info">
-                        <span class="card-mana">${manaCost}</span>
-                        <span class="card-price">${price}</span>
+            modalContent.innerHTML = `
+                <span class="close-button">&times;</span>
+                <div class="deck-header">
+                    <img src="${deck.imageUrl}" alt="${deck.name}" class="commander-image">
+                    <div class="deck-title">
+                        <h2>${deck.name}</h2>
+                        <p class="set-info">${deck.setName} (${deck.year})</p>
+                        ${priceInfo ? `<p class="price-info">Estimated Value: ${priceInfo}</p>` : ''}
+                    </div>
+                </div>
+                <div class="deck-stats">
+                    <div class="chart-container">
+                        <canvas id="manaCurveChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="colorDistributionChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="cardTypesChart"></canvas>
                     </div>
                 </div>
             `;
             
-            // Add hover preview functionality
-            cardElement.addEventListener('mousemove', (e) => showCardPreview(e, card));
-            cardElement.addEventListener('mouseleave', hideCardPreview);
+            // Reinitialize close button
+            const newCloseButton = modalContent.querySelector('.close-button');
+            if (newCloseButton) {
+                newCloseButton.onclick = () => modal.style.display = 'none';
+            }
             
-            container.appendChild(cardElement);
-        });
-    });
-    
-    hideLoading();
+            // Update charts
+            updateCharts(stats);
+        }
+    } catch (error) {
+        console.error('Error fetching deck details:', error);
+        modalContent.innerHTML = `
+            <span class="close-button">&times;</span>
+            <div class="error-message">
+                <p>Sorry, we couldn't load the deck details. Please try again later.</p>
+            </div>
+        `;
+    }
 }
 
 // Calculate deck statistics
@@ -410,6 +413,8 @@ function updatePriceInfo(cards) {
     
     document.getElementById('totalPrice').textContent = `$${totalPrice.toFixed(2)}`;
     document.getElementById('avgPrice').textContent = `$${averagePrice.toFixed(2)}`;
+    
+    return `$${totalPrice.toFixed(2)}`;
 }
 
 // Show card preview
