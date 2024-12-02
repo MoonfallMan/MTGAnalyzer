@@ -229,7 +229,10 @@ function filterDecks() {
 // Fetch deck details
 async function fetchDeckDetails(deck) {
     try {
-        const response = await fetch(`https://api.scryfall.com/cards/search?q=set:${deck.setCode} -is:commander`);
+        const response = await fetch(`https://api.scryfall.com/cards/search?q=set:${deck.setCode}+-is:commander+include:extras`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
         return data.data || [];
     } catch (error) {
@@ -241,6 +244,8 @@ async function fetchDeckDetails(deck) {
 // Open deck details modal with enhanced features
 async function openDeckDetails(deck) {
     modal.style.display = 'block';
+    
+    // Initial modal content with loading state
     modalContent.innerHTML = `
         <span class="close-button">&times;</span>
         <div class="deck-header">
@@ -258,14 +263,16 @@ async function openDeckDetails(deck) {
         </div>
     `;
 
-    // Reinitialize close button
-    const newCloseButton = modalContent.querySelector('.close-button');
-    if (newCloseButton) {
-        newCloseButton.onclick = () => modal.style.display = 'none';
-    }
+    // Initialize close button
+    const closeButton = modalContent.querySelector('.close-button');
+    closeButton.onclick = () => modal.style.display = 'none';
 
     try {
         const cards = await fetchDeckDetails(deck);
+        if (!cards || cards.length === 0) {
+            throw new Error('No deck data found');
+        }
+
         const stats = calculateDeckStats(cards);
         const priceInfo = await updatePriceInfo(cards);
 
@@ -283,7 +290,6 @@ async function openDeckDetails(deck) {
             ${priceInfo ? `<p class="price-info">Estimated Value: ${priceInfo}</p>` : ''}
         `;
 
-        // Update charts
         updateCharts(stats);
     } catch (error) {
         console.error('Error loading deck details:', error);
@@ -291,6 +297,7 @@ async function openDeckDetails(deck) {
         statsDiv.innerHTML = `
             <div class="error-message">
                 <p>Sorry, we couldn't load the deck details. Please try again later.</p>
+                <p class="error-details">${error.message}</p>
             </div>
         `;
     }
