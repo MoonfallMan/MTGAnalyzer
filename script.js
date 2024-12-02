@@ -27,19 +27,26 @@ let activeFilters = {
 
 // Commander precon set codes (update this list as needed)
 const preconSets = [
-    'woc', // Wilds of Eldraine Commander
-    'moc', // March of the Machine Commander
-    'ncc', // New Capenna Commander
-    'nec', // Neon Dynasty Commander
-    'voc', // Crimson Vow Commander
-    'mic', // Midnight Hunt Commander
-    'afc', // Forgotten Realms Commander
-    'c21', // Commander 2021
-    'khc', // Kaldheim Commander
-    'znc', // Zendikar Rising Commander
-    'c20', // Commander 2020
-    'c19', // Commander 2019
-    'c18', // Commander 2018
+    'disa', // Doctors of Innovation
+    'mat',  // Murders at Karlov Manor Commander
+    'woc',  // Wilds of Eldraine Commander
+    'lci',  // Lost Caverns of Ixalan Commander
+    'moc',  // March of the Machine Commander
+    'mom',  // March of the Machine Commander
+    'one',  // Phyrexia: All Will Be One Commander
+    'brc',  // Brother's War Commander
+    'dmc',  // Dominaria United Commander
+    'ncc',  // New Capenna Commander
+    'nec',  // Neon Dynasty Commander
+    'voc',  // Crimson Vow Commander
+    'mic',  // Midnight Hunt Commander
+    'afc',  // Forgotten Realms Commander
+    'c21',  // Commander 2021
+    'khc',  // Kaldheim Commander
+    'znc',  // Zendikar Rising Commander
+    'c20',  // Commander 2020
+    'c19',  // Commander 2019
+    'c18',  // Commander 2018
 ];
 
 // Charts
@@ -100,7 +107,7 @@ function displayDecks(decks) {
         
         const colorPips = deck.colors.map(color => 
             `<div class="color-pip" style="background-color: var(--${color.toLowerCase()}-mana)"></div>`
-        ).join('');
+        ).join('");
 
         deckElement.innerHTML = `
             <img src="${deck.imageUrl}" alt="${deck.name}" class="deck-image">
@@ -308,7 +315,26 @@ function showCardPreview(event, card) {
     const isTouchDevice = 'ontouchstart' in window;
     const rect = event.target.getBoundingClientRect();
     
-    previewImage.src = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal;
+    // Enhanced image URL handling
+    let imageUrl = null;
+    if (card.image_uris?.normal) {
+        imageUrl = card.image_uris.normal;
+    } else if (card.card_faces) {
+        // Try to find an image URL in any of the card faces
+        for (const face of card.card_faces) {
+            if (face.image_uris?.normal) {
+                imageUrl = face.image_uris.normal;
+                break;
+            }
+        }
+    }
+    
+    if (!imageUrl) {
+        console.warn('No image URL found for card:', card.name);
+        imageUrl = 'https://c1.scryfall.com/file/scryfall-cards/normal/front/1/4/141fe8b4-08cf-4c51-9b8a-684d1de55d29.jpg'; // Default card back image
+    }
+    
+    previewImage.src = imageUrl;
     previewName.textContent = card.name;
     previewType.textContent = card.type_line;
     previewPrice.textContent = card.prices?.usd ? `$${card.prices.usd}` : 'Price not available';
