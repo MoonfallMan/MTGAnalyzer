@@ -25,30 +25,6 @@ let activeFilters = {
     search: ''
 };
 
-// Commander precon set codes (update this list as needed)
-const preconSets = [
-    'disa', // Doctors of Innovation
-    'mat',  // Murders at Karlov Manor Commander
-    'woc',  // Wilds of Eldraine Commander
-    'lci',  // Lost Caverns of Ixalan Commander
-    'moc',  // March of the Machine Commander
-    'mom',  // March of the Machine Commander
-    'one',  // Phyrexia: All Will Be One Commander
-    'brc',  // Brother's War Commander
-    'dmc',  // Dominaria United Commander
-    'ncc',  // New Capenna Commander
-    'nec',  // Neon Dynasty Commander
-    'voc',  // Crimson Vow Commander
-    'mic',  // Midnight Hunt Commander
-    'afc',  // Forgotten Realms Commander
-    'c21',  // Commander 2021
-    'khc',  // Kaldheim Commander
-    'znc',  // Zendikar Rising Commander
-    'c20',  // Commander 2020
-    'c19',  // Commander 2019
-    'c18',  // Commander 2018
-];
-
 // Charts
 let manaCurveChart, colorDistributionChart, cardTypesChart;
 
@@ -56,41 +32,56 @@ let manaCurveChart, colorDistributionChart, cardTypesChart;
 async function init() {
     showLoading();
     await fetchAllPreconDecks();
-    populateFilters();
-    initializeTouchEvents();
     hideLoading();
 }
 
 // Fetch all precon decks
 async function fetchAllPreconDecks() {
     try {
-        const promises = preconSets.map(setCode => 
-            fetch(`https://api.scryfall.com/cards/search?q=set:${setCode}+is:commander`)
-                .then(res => res.json())
-                .then(data => ({
-                    setCode,
-                    commanders: data.data
-                }))
+        // Fetch all sets
+        const setsResponse = await fetch('https://api.scryfall.com/sets');
+        const setsData = await setsResponse.json();
+        
+        // Filter for commander sets and precons
+        const commanderSets = setsData.data.filter(set => 
+            (set.set_type === 'commander' || 
+             set.name.toLowerCase().includes('commander') ||
+             set.name.toLowerCase().includes('precon')) &&
+            !set.digital
         );
 
-        const results = await Promise.all(promises);
-        
-        for (const result of results) {
-            for (const commander of result.commanders) {
-                const deck = {
-                    id: commander.id,
-                    name: commander.name,
-                    colors: commander.color_identity,
-                    imageUrl: commander.image_uris?.normal || commander.card_faces?.[0]?.image_uris?.normal,
-                    setName: commander.set_name,
-                    setCode: result.setCode,
-                    year: new Date(commander.released_at).getFullYear()
-                };
-                preconDecks.push(deck);
+        // Process each set
+        for (const set of commanderSets) {
+            try {
+                const response = await fetch(`https://api.scryfall.com/cards/search?q=set:${set.code}+is:commander`);
+                const data = await response.json();
+                
+                if (data.data) {
+                    for (const commander of data.data) {
+                        const deck = {
+                            id: commander.id,
+                            name: commander.name,
+                            colors: commander.color_identity,
+                            imageUrl: commander.image_uris?.normal || commander.card_faces?.[0]?.image_uris?.normal,
+                            setName: set.name,
+                            setCode: set.code,
+                            year: new Date(commander.released_at).getFullYear()
+                        };
+                        preconDecks.push(deck);
+                    }
+                }
+            } catch (error) {
+                console.error(`Error fetching commanders for set ${set.code}:`, error);
             }
         }
 
+        // Sort decks by release date (newest first)
+        preconDecks.sort((a, b) => b.year - a.year);
+        
+        // Update UI
         displayDecks(preconDecks);
+        populateFilters();
+        initializeTouchEvents();
     } catch (error) {
         console.error('Error fetching precon decks:', error);
     }
@@ -107,21 +98,51 @@ function displayDecks(decks) {
         
         const colorPips = deck.colors.map(color => 
             `<div class="color-pip" style="background-color: var(--${color.toLowerCase()}-mana)"></div>`
-        ).join('");
+        ).join('');
 
         deckElement.innerHTML = `
             <img src="${deck.imageUrl}" alt="${deck.name}" class="deck-image">
             <div class="deck-info">
                 <h3>${deck.name}</h3>
-                <p>${deck.setName}</p>
-                <div class="deck-colors">
-                    ${colorPips}
-                </div>
+                <div class="color-pips">${colorPips}</div>
+                <p class="set-name">${deck.setName} (${deck.year})</p>
             </div>
         `;
         
         decksGrid.appendChild(deckElement);
     });
+}
+
+// Populate filters
+function populateFilters() {
+    // Get unique sets and years
+    const sets = [...new Set(preconDecks.map(deck => deck.setName))].sort();
+    const years = [...new Set(preconDecks.map(deck => deck.year))].sort((a, b) => b - a);
+    
+    // Populate set filter
+    setFilter.innerHTML = '<option value="">All Sets</option>' +
+        sets.map(set => `<option value="${set}">${set}</option>`).join('');
+    
+    // Populate year filter
+    yearFilter.innerHTML = '<option value="">All Years</option>' +
+        years.map(year => `<option value="${year}">${year}</option>`).join('');
+}
+
+// Filter decks
+function filterDecks() {
+    const filteredDecks = preconDecks.filter(deck => {
+        const matchesColors = activeFilters.colors.size === 0 || 
+            deck.colors.some(color => activeFilters.colors.has(color));
+        const matchesSet = !activeFilters.set || deck.setName === activeFilters.set;
+        const matchesYear = !activeFilters.year || deck.year.toString() === activeFilters.year;
+        const matchesSearch = !activeFilters.search || 
+            deck.name.toLowerCase().includes(activeFilters.search.toLowerCase()) ||
+            deck.setName.toLowerCase().includes(activeFilters.search.toLowerCase());
+        
+        return matchesColors && matchesSet && matchesYear && matchesSearch;
+    });
+    
+    displayDecks(filteredDecks);
 }
 
 // Fetch deck details
@@ -403,44 +424,6 @@ window.onclick = function(event) {
     if (event.target === modal) {
         modal.style.display = 'none';
     }
-}
-
-// Filter decks
-function filterDecks() {
-    const filteredDecks = preconDecks.filter(deck => {
-        const matchesColors = activeFilters.colors.size === 0 || 
-            deck.colors.some(color => activeFilters.colors.has(color));
-        const matchesSet = !activeFilters.set || deck.setCode === activeFilters.set;
-        const matchesYear = !activeFilters.year || deck.year.toString() === activeFilters.year;
-        const matchesSearch = !activeFilters.search || 
-            deck.name.toLowerCase().includes(activeFilters.search.toLowerCase()) ||
-            deck.setName.toLowerCase().includes(activeFilters.search.toLowerCase());
-        
-        return matchesColors && matchesSet && matchesYear && matchesSearch;
-    });
-    
-    displayDecks(filteredDecks);
-}
-
-// Populate filters
-function populateFilters() {
-    // Populate set filter
-    const sets = [...new Set(preconDecks.map(deck => deck.setCode))];
-    sets.forEach(set => {
-        const option = document.createElement('option');
-        option.value = set;
-        option.textContent = preconDecks.find(deck => deck.setCode === set).setName;
-        setFilter.appendChild(option);
-    });
-    
-    // Populate year filter
-    const years = [...new Set(preconDecks.map(deck => deck.year))].sort((a, b) => b - a);
-    years.forEach(year => {
-        const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
-        yearFilter.appendChild(option);
-    });
 }
 
 // Event listeners
