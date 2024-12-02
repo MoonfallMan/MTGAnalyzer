@@ -24,6 +24,10 @@ let activeFilters = {
     year: '',
     search: ''
 };
+let loadingProgress = {
+    total: 0,
+    loaded: 0
+};
 
 // Charts
 let manaCurveChart, colorDistributionChart, cardTypesChart;
@@ -56,6 +60,12 @@ function setCachedData(data) {
     localStorage.setItem(CACHE_KEY, JSON.stringify(cacheObject));
 }
 
+// Display loading progress
+function updateLoadingProgress() {
+    const percentage = loadingProgress.total ? Math.round((loadingProgress.loaded / loadingProgress.total) * 100) : 0;
+    loadingSpinner.innerHTML = `Loading decks... ${percentage}% complete`;
+}
+
 // Initialize
 async function init() {
     showLoading();
@@ -77,6 +87,7 @@ async function fetchAllPreconDecks() {
         }
 
         // If no cache, fetch from API
+        showLoading();
         const setsResponse = await fetch('https://api.scryfall.com/sets');
         const setsData = await setsResponse.json();
         
@@ -88,6 +99,10 @@ async function fetchAllPreconDecks() {
             !set.digital
         );
 
+        loadingProgress.total = commanderSets.length;
+        loadingProgress.loaded = 0;
+        updateLoadingProgress();
+
         // Process each set
         for (const set of commanderSets) {
             try {
@@ -95,6 +110,7 @@ async function fetchAllPreconDecks() {
                 const data = await response.json();
                 
                 if (data.data) {
+                    const newDecks = [];
                     for (const commander of data.data) {
                         const deck = {
                             id: commander.id,
@@ -105,24 +121,34 @@ async function fetchAllPreconDecks() {
                             setCode: set.code,
                             year: new Date(commander.released_at).getFullYear()
                         };
+                        newDecks.push(deck);
                         preconDecks.push(deck);
                     }
+                    
+                    // Sort and display new decks immediately
+                    newDecks.sort((a, b) => b.year - a.year);
+                    displayDecks(newDecks, true);
                 }
+                
+                loadingProgress.loaded++;
+                updateLoadingProgress();
             } catch (error) {
                 console.error(`Error fetching commanders for set ${set.code}:`, error);
+                loadingProgress.loaded++;
+                updateLoadingProgress();
             }
         }
 
-        // Sort decks by release date (newest first)
+        // Final sort of all decks
         preconDecks.sort((a, b) => b.year - a.year);
         
         // Cache the fetched data
         setCachedData(preconDecks);
         
-        // Update UI
-        displayDecks(preconDecks);
+        // Update filters after all decks are loaded
         populateFilters();
         initializeTouchEvents();
+        hideLoading();
     } catch (error) {
         console.error('Error fetching precon decks:', error);
         
@@ -134,12 +160,15 @@ async function fetchAllPreconDecks() {
             populateFilters();
             initializeTouchEvents();
         }
+        hideLoading();
     }
 }
 
 // Display decks in the grid
-function displayDecks(decks) {
-    decksGrid.innerHTML = '';
+function displayDecks(decks, append = false) {
+    if (!append) {
+        decksGrid.innerHTML = '';
+    }
     
     decks.forEach(deck => {
         const deckElement = document.createElement('div');
@@ -151,7 +180,9 @@ function displayDecks(decks) {
         ).join('');
 
         deckElement.innerHTML = `
-            <img src="${deck.imageUrl}" alt="${deck.name}" class="deck-image">
+            <div class="deck-image">
+                <img src="${deck.imageUrl}" alt="${deck.name}" loading="lazy">
+            </div>
             <div class="deck-info">
                 <h3>${deck.name}</h3>
                 <div class="color-pips">${colorPips}</div>
