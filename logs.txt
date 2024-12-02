@@ -1,0 +1,48 @@
+[2024-01-08] Project Status and Changes
+
+Current State:
+- Basic UI implemented with grid layout for commander/precon decks
+- Filtering system in place (colors, sets, years)
+- Search functionality working
+- Card preview on hover implemented
+- Local caching system implemented (24h expiration)
+
+Issues Identified:
+1. Modal Display Issues:
+   - Conflict between static HTML modal structure and dynamic content generation
+   - Multiple modal content containers causing confusion
+   - Inconsistent modal close button implementation
+
+2. Card Preview Issues:
+   - Card hover preview needs improvement
+   - Missing error handling for failed image loads
+   - No loading state for card images
+
+3. General Issues:
+   - Font loading issue with Beleren font
+   - Inconsistent error handling
+   - Missing loading states in some areas
+
+Required Fixes:
+1. Modal System:
+   - Consolidate modal content structure
+   - Ensure single source of truth for modal content
+   - Implement consistent close button behavior
+   - Add proper error handling for failed content loads
+
+2. Card Preview:
+   - Add loading state for card images
+   - Implement error fallback for failed image loads
+   - Improve hover interaction UX
+
+3. General Improvements:
+   - Replace Beleren font with system fonts
+   - Add comprehensive error handling
+   - Implement consistent loading states
+
+Next Steps:
+1. Consolidate modal implementation
+2. Fix card preview system
+3. Implement proper error handling
+4. Add loading states
+5. Update documentation

@@ -53,7 +53,19 @@
         <div class="modal-content">
             <span class="close-button">&times;</span>
             <div id="modalContent">
-                <h2 id="deckName"></h2>
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Loading deck details...</p>
+                </div>
+                <div class="error-state" style="display: none;">
+                    <p class="error-message"></p>
+                    <button class="retry-button">Retry</button>
+                </div>
+                <div class="commander-section">
+                    <div class="commander-image"></div>
+                    <h2 class="deck-name"></h2>
+                    <p class="set-info"></p>
+                </div>
                 <div class="deck-stats">
                     <div class="stat-box">
                         <h3>Mana Curve</h3>
@@ -81,22 +93,22 @@
                         </div>
                     </div>
                 </div>
-                <div class="card-categories">
+                <div class="card-lists">
                     <div class="category-list">
                         <h3>Commander</h3>
-                        <div id="commanderList" class="card-list"></div>
+                        <div id="commanderList" class="card-grid"></div>
                     </div>
                     <div class="category-list">
                         <h3>Creatures</h3>
-                        <div id="creaturesList" class="card-list"></div>
+                        <div id="creaturesList" class="card-grid"></div>
                     </div>
                     <div class="category-list">
                         <h3>Spells</h3>
-                        <div id="spellsList" class="card-list"></div>
+                        <div id="spellsList" class="card-grid"></div>
                     </div>
                     <div class="category-list">
                         <h3>Lands</h3>
-                        <div id="landsList" class="card-list"></div>
+                        <div id="landsList" class="card-grid"></div>
                     </div>
                 </div>
             </div>

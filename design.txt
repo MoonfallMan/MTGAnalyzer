@@ -1,0 +1,50 @@
+MTG Analyzer Design Document
+
+1. Core Functionality Requirements:
+   - Display commander/precon decks in a grid layout
+   - Click on commander/card to show detailed information
+   - Show list of cards in the deck
+   - Hover over cards to see card images
+   - Filter decks by color, set, and year
+   - Search functionality for deck names
+
+2. UI Components:
+   a. Header:
+      - Logo
+      - Search bar
+      - Mana color filters (W,U,B,R,G)
+   
+   b. Main Content:
+      - Filter section (Set and Year dropdowns)
+      - Decks grid
+      - Loading spinner
+   
+   c. Modal:
+      - Deck details
+      - Card lists by category
+      - Statistics and charts
+      - Close button
+
+3. Data Management:
+   - Cache deck data locally (24-hour expiration)
+   - Fetch data from Scryfall API
+   - Rate limiting for API requests
+   - Loading state management
+
+4. Interaction Rules:
+   - Cards should be clickable to show details
+   - Modal should close when clicking outside or on close button
+   - Hover effects should be subtle and not disruptive
+   - Loading states should be clearly visible
+
+5. Style Guidelines:
+   - Use MTG color scheme for mana symbols
+   - Consistent card layout and spacing
+   - Responsive design for all screen sizes
+   - Clear typography hierarchy
+
+6. Performance Considerations:
+   - Lazy loading for card images
+   - Efficient DOM updates
+   - Proper error handling
+   - Smooth animations and transitions

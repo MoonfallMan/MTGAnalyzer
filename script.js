@@ -230,7 +230,7 @@ function filterDecks() {
 async function fetchDeckDetails(deck) {
     try {
         // Using proper Scryfall syntax: set:[code] for exact set matching
-        const query = `set:${deck.setCode.toLowerCase()} -is:commander`;
+        const query = `set:${deck.setCode.toLowerCase()} (is:commander OR -is:commander)`;
         const encodedQuery = encodeURIComponent(query);
         const response = await fetch(`https://api.scryfall.com/cards/search?q=${encodedQuery}&unique=prints&order=set`);
         
@@ -401,123 +401,107 @@ async function updatePriceInfo(cards) {
     }
 }
 
-// Open deck details modal with enhanced features
+// Open deck details modal
 async function openDeckDetails(deck) {
-    modal.style.display = 'block';
-    
-    // Initial modal content with loading state
-    modalContent.innerHTML = `
-        <span class="close-button">&times;</span>
-        <div class="deck-header">
-            <img src="${deck.imageUrl}" alt="${deck.name}" class="commander-image">
-            <div class="deck-title">
-                <h2>${deck.name}</h2>
-                <p class="set-info">${deck.setName} (${deck.year})</p>
-            </div>
-        </div>
-        <div class="deck-stats">
-            <div class="loading-stats">
-                <div class="spinner"></div>
-                <div class="stats-loading-text">Loading deck details...</div>
-            </div>
-        </div>
-    `;
+    const modal = document.getElementById('deckModal');
+    const modalContent = document.getElementById('modalContent');
+    const loadingState = modalContent.querySelector('.loading-state');
+    const errorState = modalContent.querySelector('.error-state');
+    const commanderSection = modalContent.querySelector('.commander-section');
+    const deckStats = modalContent.querySelector('.deck-stats');
+    const cardLists = modalContent.querySelector('.card-lists');
 
-    // Initialize close button
-    const closeButton = modalContent.querySelector('.close-button');
-    closeButton.onclick = () => modal.style.display = 'none';
+    // Reset modal state
+    loadingState.style.display = 'block';
+    errorState.style.display = 'none';
+    deckStats.style.display = 'none';
+    cardLists.style.display = 'none';
+
+    // Update commander section
+    const commanderImage = commanderSection.querySelector('.commander-image');
+    const deckName = commanderSection.querySelector('.deck-name');
+    const setInfo = commanderSection.querySelector('.set-info');
+    
+    commanderImage.innerHTML = `<img src="${deck.imageUrl}" alt="${deck.name}">`;
+    deckName.textContent = deck.name;
+    setInfo.textContent = `${deck.setName} (${deck.year})`;
+
+    // Show modal
+    modal.style.display = 'block';
 
     try {
+        // Fetch deck details
         const cards = await fetchDeckDetails(deck);
         if (!cards || cards.length === 0) {
-            throw new Error('No deck data found');
+            throw new Error('No cards found for this deck');
         }
-
-        const stats = calculateDeckStats(cards);
-        const priceInfo = await updatePriceInfo(cards);
 
         // Group cards by type
         const cardsByType = {
-            Creatures: cards.filter(card => card.type_line.includes('Creature')),
-            Instants: cards.filter(card => card.type_line.includes('Instant')),
-            Sorceries: cards.filter(card => card.type_line.includes('Sorcery')),
-            Artifacts: cards.filter(card => card.type_line.includes('Artifact') && !card.type_line.includes('Creature')),
-            Enchantments: cards.filter(card => card.type_line.includes('Enchantment') && !card.type_line.includes('Creature')),
-            Planeswalkers: cards.filter(card => card.type_line.includes('Planeswalker')),
+            Commander: cards.filter(card => card.type_line.includes('Legendary Creature')),
+            Creatures: cards.filter(card => card.type_line.includes('Creature') && !card.type_line.includes('Legendary')),
+            Spells: cards.filter(card => !card.type_line.includes('Creature') && !card.type_line.includes('Land')),
             Lands: cards.filter(card => card.type_line.includes('Land'))
         };
 
-        const statsDiv = modalContent.querySelector('.deck-stats');
-        statsDiv.innerHTML = `
-            <div class="chart-container">
-                <canvas id="manaCurveChart"></canvas>
-            </div>
-            <div class="chart-container">
-                <canvas id="colorDistributionChart"></canvas>
-            </div>
-            <div class="chart-container">
-                <canvas id="cardTypesChart"></canvas>
-            </div>
-            ${priceInfo ? `<p class="price-info">Estimated Value: ${priceInfo}</p>` : ''}
-        `;
+        // Update card lists
+        Object.entries(cardsByType).forEach(([type, cards]) => {
+            const listElement = document.getElementById(`${type.toLowerCase()}List`);
+            if (listElement && cards.length > 0) {
+                cards.forEach(card => {
+                    const cardItem = document.createElement('div');
+                    cardItem.className = 'card-item';
+                    cardItem.dataset.cardId = card.id;
+                    cardItem.innerHTML = `
+                        <span class="card-name">${card.name}</span>
+                        <span class="card-mana">${card.mana_cost || ''}</span>
+                    `;
+                    listElement.appendChild(cardItem);
+                });
+            }
+        });
 
-        // Add card list section
-        const cardListHTML = `
-            <div class="deck-cards">
-                <h3>Deck Contents</h3>
-                ${Object.entries(cardsByType).map(([type, typeCards]) => typeCards.length ? `
-                    <div class="cards-section">
-                        <div class="cards-section-title">${type} (${typeCards.length})</div>
-                        <div class="cards-grid">
-                            ${typeCards.map(card => `
-                                <div class="card-item" data-card-id="${card.id}">
-                                    <div class="card-image">
-                                        <img src="${card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal}" 
-                                             alt="${card.name}"
-                                             loading="lazy">
-                                    </div>
-                                    <div class="card-details">
-                                        <div class="card-name">${card.name}</div>
-                                        <div class="card-meta">
-                                            <div class="card-type">${card.type_line.split('—')[0].trim()}</div>
-                                            <div class="card-cost">${card.mana_cost || ''}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                ` : '').join('')}
-            </div>
-        `;
-
-        modalContent.insertAdjacentHTML('beforeend', cardListHTML);
-
-        // Update charts
-        updateCharts(stats);
-
-        // Add click handlers for card previews
-        const cardItems = modalContent.querySelectorAll('.card-item');
+        // Add hover effect to card items
+        const cardItems = cardLists.querySelectorAll('.card-item');
         cardItems.forEach(item => {
             const cardId = item.dataset.cardId;
             const card = cards.find(c => c.id === cardId);
             if (card) {
-                item.addEventListener('mouseover', (e) => showCardPreview(e, card));
-                item.addEventListener('mouseout', hideCardPreview);
+                item.addEventListener('mouseenter', (e) => showCardPreview(e, card));
+                item.addEventListener('mouseleave', hideCardPreview);
             }
         });
 
+        // Show deck stats and card lists
+        loadingState.style.display = 'none';
+        deckStats.style.display = 'block';
+        cardLists.style.display = 'block';
+
+        // Update charts
+        updateCharts(calculateDeckStats(cards));
+
     } catch (error) {
         console.error('Error loading deck details:', error);
-        const statsDiv = modalContent.querySelector('.deck-stats');
-        statsDiv.innerHTML = `
-            <div class="error-message">
-                <p>Sorry, we couldn't load the deck details. Please try again later.</p>
-                <p class="error-details">${error.message}</p>
-            </div>
-        `;
+        loadingState.style.display = 'none';
+        errorState.style.display = 'block';
+        errorState.querySelector('.error-message').textContent = error.message;
+        
+        // Add retry functionality
+        errorState.querySelector('.retry-button').onclick = () => openDeckDetails(deck);
     }
 }
+
+// Close modal when clicking outside or on close button
+window.onclick = (event) => {
+    const modal = document.getElementById('deckModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+};
+
+document.querySelector('.close-button').onclick = () => {
+    document.getElementById('deckModal').style.display = 'none';
+};
 
 // Show card preview
 function showCardPreview(event, card) {
@@ -600,17 +584,6 @@ function initializeTouchEvents() {
         cardPreview.addEventListener('touchmove', (e) => {
             e.preventDefault();
         });
-    }
-}
-
-// Close modal
-closeButton.onclick = function() {
-    modal.style.display = 'none';
-}
-
-window.onclick = function(event) {
-    if (event.target === modal) {
-        modal.style.display = 'none';
     }
 }
 
