@@ -229,72 +229,66 @@ function filterDecks() {
 // Fetch deck details
 async function fetchDeckDetails(deck) {
     try {
-        const response = await fetch(`https://api.scryfall.com/cards/search?q=set:${deck.setCode}+-is:commander+include:extras`);
+        const response = await fetch(`https://api.scryfall.com/cards/search?q=set:${deck.setCode} -is:commander`);
         const data = await response.json();
-        return data.data;
+        return data.data || [];
     } catch (error) {
         console.error('Error fetching deck details:', error);
-        return [];
+        throw error;
     }
 }
 
 // Open deck details modal with enhanced features
 async function openDeckDetails(deck) {
     modal.style.display = 'block';
-    
-    // Show loading state first
     modalContent.innerHTML = `
-        <div class="loading-stats">
-            <div class="spinner"></div>
-            <div class="stats-loading-text">Loading deck details...</div>
+        <span class="close-button">&times;</span>
+        <div class="deck-header">
+            <img src="${deck.imageUrl}" alt="${deck.name}" class="commander-image">
+            <div class="deck-title">
+                <h2>${deck.name}</h2>
+                <p class="set-info">${deck.setName} (${deck.year})</p>
+            </div>
+        </div>
+        <div class="deck-stats">
+            <div class="loading-stats">
+                <div class="spinner"></div>
+                <div class="stats-loading-text">Loading deck details...</div>
+            </div>
         </div>
     `;
 
+    // Reinitialize close button
+    const newCloseButton = modalContent.querySelector('.close-button');
+    if (newCloseButton) {
+        newCloseButton.onclick = () => modal.style.display = 'none';
+    }
+
     try {
-        const response = await fetch(`https://api.scryfall.com/cards/search?q=deck:${deck.setCode} -is:commander`);
-        const data = await response.json();
-        
-        if (data.data) {
-            const cards = data.data;
-            const stats = calculateDeckStats(cards);
-            const priceInfo = await updatePriceInfo(cards);
-            
-            modalContent.innerHTML = `
-                <span class="close-button">&times;</span>
-                <div class="deck-header">
-                    <img src="${deck.imageUrl}" alt="${deck.name}" class="commander-image">
-                    <div class="deck-title">
-                        <h2>${deck.name}</h2>
-                        <p class="set-info">${deck.setName} (${deck.year})</p>
-                        ${priceInfo ? `<p class="price-info">Estimated Value: ${priceInfo}</p>` : ''}
-                    </div>
-                </div>
-                <div class="deck-stats">
-                    <div class="chart-container">
-                        <canvas id="manaCurveChart"></canvas>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="colorDistributionChart"></canvas>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="cardTypesChart"></canvas>
-                    </div>
-                </div>
-            `;
-            
-            // Reinitialize close button
-            const newCloseButton = modalContent.querySelector('.close-button');
-            if (newCloseButton) {
-                newCloseButton.onclick = () => modal.style.display = 'none';
-            }
-            
-            // Update charts
-            updateCharts(stats);
-        }
+        const cards = await fetchDeckDetails(deck);
+        const stats = calculateDeckStats(cards);
+        const priceInfo = await updatePriceInfo(cards);
+
+        const statsDiv = modalContent.querySelector('.deck-stats');
+        statsDiv.innerHTML = `
+            <div class="chart-container">
+                <canvas id="manaCurveChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="colorDistributionChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="cardTypesChart"></canvas>
+            </div>
+            ${priceInfo ? `<p class="price-info">Estimated Value: ${priceInfo}</p>` : ''}
+        `;
+
+        // Update charts
+        updateCharts(stats);
     } catch (error) {
-        console.error('Error fetching deck details:', error);
-        modalContent.innerHTML = `
-            <span class="close-button">&times;</span>
+        console.error('Error loading deck details:', error);
+        const statsDiv = modalContent.querySelector('.deck-stats');
+        statsDiv.innerHTML = `
             <div class="error-message">
                 <p>Sorry, we couldn't load the deck details. Please try again later.</p>
             </div>
