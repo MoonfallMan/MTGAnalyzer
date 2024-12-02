@@ -428,6 +428,17 @@ async function openDeckDetails(deck) {
         const stats = calculateDeckStats(cards);
         const priceInfo = await updatePriceInfo(cards);
 
+        // Group cards by type
+        const cardsByType = {
+            Creatures: cards.filter(card => card.type_line.includes('Creature')),
+            Instants: cards.filter(card => card.type_line.includes('Instant')),
+            Sorceries: cards.filter(card => card.type_line.includes('Sorcery')),
+            Artifacts: cards.filter(card => card.type_line.includes('Artifact') && !card.type_line.includes('Creature')),
+            Enchantments: cards.filter(card => card.type_line.includes('Enchantment') && !card.type_line.includes('Creature')),
+            Planeswalkers: cards.filter(card => card.type_line.includes('Planeswalker')),
+            Lands: cards.filter(card => card.type_line.includes('Land'))
+        };
+
         const statsDiv = modalContent.querySelector('.deck-stats');
         statsDiv.innerHTML = `
             <div class="chart-container">
@@ -442,7 +453,52 @@ async function openDeckDetails(deck) {
             ${priceInfo ? `<p class="price-info">Estimated Value: ${priceInfo}</p>` : ''}
         `;
 
+        // Add card list section
+        const cardListHTML = `
+            <div class="deck-cards">
+                <h3>Deck Contents</h3>
+                ${Object.entries(cardsByType).map(([type, typeCards]) => typeCards.length ? `
+                    <div class="cards-section">
+                        <div class="cards-section-title">${type} (${typeCards.length})</div>
+                        <div class="cards-grid">
+                            ${typeCards.map(card => `
+                                <div class="card-item" data-card-id="${card.id}">
+                                    <div class="card-image">
+                                        <img src="${card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal}" 
+                                             alt="${card.name}"
+                                             loading="lazy">
+                                    </div>
+                                    <div class="card-details">
+                                        <div class="card-name">${card.name}</div>
+                                        <div class="card-meta">
+                                            <div class="card-type">${card.type_line.split('—')[0].trim()}</div>
+                                            <div class="card-cost">${card.mana_cost || ''}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : '').join('')}
+            </div>
+        `;
+
+        modalContent.insertAdjacentHTML('beforeend', cardListHTML);
+
+        // Update charts
         updateCharts(stats);
+
+        // Add click handlers for card previews
+        const cardItems = modalContent.querySelectorAll('.card-item');
+        cardItems.forEach(item => {
+            const cardId = item.dataset.cardId;
+            const card = cards.find(c => c.id === cardId);
+            if (card) {
+                item.addEventListener('mouseover', (e) => showCardPreview(e, card));
+                item.addEventListener('mouseout', hideCardPreview);
+            }
+        });
+
     } catch (error) {
         console.error('Error loading deck details:', error);
         const statsDiv = modalContent.querySelector('.deck-stats');
